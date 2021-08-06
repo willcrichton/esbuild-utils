@@ -1,20 +1,26 @@
 import fs from "fs/promises";
 import path from "path";
+import process from "process";
 import _ from "lodash";
 import { Plugin } from "esbuild";
 import { IPackageJson } from "package-json-type";
 
-export const avoidSymlinkConflictsPlugin = (pkg: IPackageJson): Plugin => ({
-  name: "test",
+export const avoidSymlinkConflictsPlugin = ({
+  pkg,
+}: {
+  pkg: IPackageJson;
+}): Plugin => ({
+  name: "avoid-symlink-conflicts",
   async setup(build) {
+    let base_dir = process.cwd();
     let deps = await Promise.all(
       Object.keys(pkg.dependencies || []).map(async (k) => {
-        let stats = await fs.lstat(`./node_modules/${k}`);
+        let stats = await fs.lstat(`${base_dir}/node_modules/${k}`);
         if (!stats.isSymbolicLink()) {
           return [];
         }
 
-        let dep_pkg = require(`./node_modules/${k}/package.json`);
+        let dep_pkg = require(`${base_dir}/node_modules/${k}/package.json`);
         if (!dep_pkg.peerDependencies) {
           return [];
         }
@@ -26,18 +32,20 @@ export const avoidSymlinkConflictsPlugin = (pkg: IPackageJson): Plugin => ({
     let deps_flat = _.uniq(_.flatten(deps));
 
     deps_flat.forEach((k) => {
-      let dep_pkg = require(`./node_modules/${k}/package.json`);
+      let dep_pkg = require(`${base_dir}/node_modules/${k}/package.json`);
       let filter = new RegExp(`^${k}$`);
       build.onResolve({ filter }, (args) => ({
-        path: `${path.resolve(__dirname)}/node_modules/${args.path}/${
-          dep_pkg.main
-        }`,
+        path: `${base_dir}/node_modules/${args.path}/${dep_pkg.main}`,
       }));
     });
   },
 });
 
-export const copyPlugin = (): Plugin => ({
+export const copyPlugin = ({
+  extensions,
+}: {
+  extensions: string[];
+}): Plugin => ({
   name: "copy",
   setup(build) {
     let outdir = build.initialOptions.outdir;
@@ -46,7 +54,8 @@ export const copyPlugin = (): Plugin => ({
     }
 
     let paths: [string, string][] = [];
-    build.onResolve({ filter: /\.html$/ }, (args) => {
+    let filter = new RegExp(extensions.map(_.escapeRegExp).join("|"));
+    build.onResolve({ filter }, (args) => {
       let abs_path = path.join(args.resolveDir, args.path);
       let outpath = path.join(outdir!, path.basename(args.path));
       paths.push([abs_path, outpath]);
