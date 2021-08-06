@@ -1,9 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
-import process from "process";
 import _ from "lodash";
-import { Plugin } from "esbuild";
+import { BuildOptions, Plugin } from "esbuild";
 import { IPackageJson } from "package-json-type";
+import { program } from "commander";
 
 export const avoidSymlinkConflictsPlugin = ({
   pkg,
@@ -13,8 +13,11 @@ export const avoidSymlinkConflictsPlugin = ({
   name: "avoid-symlink-conflicts",
   async setup(build) {
     let base_dir = process.cwd();
+    let all_deps = Object.keys(pkg.dependencies || {}).concat(
+      Object.keys(pkg.devDependencies || {})
+    );
     let deps = await Promise.all(
-      Object.keys(pkg.dependencies || []).map(async (k) => {
+      all_deps.map(async (k) => {
         let stats = await fs.lstat(`${base_dir}/node_modules/${k}`);
         if (!stats.isSymbolicLink()) {
           return [];
@@ -73,3 +76,15 @@ export const copyPlugin = ({
     });
   },
 });
+
+export const cli = (): BuildOptions => {
+  program.option("-w, --watch");
+  program.option("-p, --prod");
+  program.parse(process.argv);
+  const options = program.opts();
+
+  return {
+    watch: options.watch,
+    minify: options.prod,
+  };
+};
