@@ -1,0 +1,21 @@
+{
+  "name": "@wcrichto/esbuild-utils",
+  "version": "0.1.0",
+  "author": "Will Crichton",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "scripts": {
+    "tc": "tsc",
+    "build": "esbuild src/index.ts --outdir=dist --sourcemap --minify"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.172",
+    "@types/node": "^16.4.13",
+    "esbuild": "^0.12.18",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "package-json-type": "^1.0.3"
+  }
+}

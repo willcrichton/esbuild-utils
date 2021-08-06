@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+      "strict": true,
+      "sourceMap": true,
+      "lib": ["es2018"],
+      "esModuleInterop": true,
+     
+      "outDir": "dist",
+      "declaration": true,
+      "emitDeclarationOnly": true,
+  },
+
+  "include": ["src/index.ts"]
+}
