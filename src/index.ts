@@ -5,36 +5,28 @@ import { BuildOptions, Plugin } from "esbuild";
 import { IPackageJson } from "package-json-type";
 import { program } from "commander";
 
-export const avoidSymlinkConflictsPlugin = ({
+export const avoidDevPeerConflicts = ({
   pkg,
 }: {
   pkg: IPackageJson;
 }): Plugin => ({
-  name: "avoid-symlink-conflicts",
+  name: "avoid-dev-peer-conflicts",
   async setup(build) {
     let base_dir = process.cwd();
     let all_deps = Object.keys(pkg.dependencies || {}).concat(
       Object.keys(pkg.devDependencies || {})
     );
-    let deps = await Promise.all(
-      all_deps.map(async (k) => {
-        let stats = await fs.lstat(`${base_dir}/node_modules/${k}`);
-        if (!stats.isSymbolicLink()) {
-          return [];
-        }
+    let peer_deps = all_deps.map((k) => {
+      let dep_pkg = require(`${base_dir}/node_modules/${k}/package.json`);
+      if (!dep_pkg.peerDependencies) {
+        return [];
+      }
 
-        let dep_pkg = require(`${base_dir}/node_modules/${k}/package.json`);
-        if (!dep_pkg.peerDependencies) {
-          return [];
-        }
+      return Object.keys(dep_pkg.peerDependencies);
+    });
 
-        return Object.keys(dep_pkg.peerDependencies);
-      })
-    );
-
-    let deps_flat = _.uniq(_.flatten(deps));
-
-    deps_flat.forEach((k) => {
+    let peer_deps_flat = _.uniq(_.flatten(peer_deps));
+    peer_deps_flat.forEach((k) => {
       let dep_pkg = require(`${base_dir}/node_modules/${k}/package.json`);
       let filter = new RegExp(`^${k}$`);
       build.onResolve({ filter }, (args) => ({
